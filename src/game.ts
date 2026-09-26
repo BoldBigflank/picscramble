@@ -1,5 +1,10 @@
 import { init, Sprite, GameLoop, getContext, initKeys, onKey } from 'kontra';
 import { loadImage, shuffleArray } from './utils';
+import { levels } from './levels';
+
+const currentLevel = levels[0];
+const rowHeight = 320 / currentLevel.rows;
+const colWidth = 320 / currentLevel.cols;
 
 const sprites: Sprite[] = [];
 
@@ -9,8 +14,8 @@ let gameWon = false;
 initKeys()
 onKey('z', () => {
     selectedRow += 1;
-    if (selectedRow > 4) {
-        selectedRow = 4;
+    if (selectedRow > currentLevel.rows - 1) {
+        selectedRow = currentLevel.rows - 1;
     }
 })
 onKey('a', () => {
@@ -36,7 +41,7 @@ onKey('arrowup', () => {
 })
 
 onKey('arrowdown', () => {
-    if (selectedRow >= 4) return;
+    if (selectedRow >= currentLevel.rows - 1) return;
     const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
     const spritesInBelowRow = sprites.filter(sprite => sprite.row === selectedRow + 1);
     spritesInRow.forEach(sprite => {
@@ -53,7 +58,7 @@ onKey('arrowright', () => {
     // Move cells of the selected row right, wrapping
     const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
     spritesInRow.forEach(sprite => {
-        sprite.col = (sprite.col + 1) % 5;
+        sprite.col = (sprite.col + 1) % currentLevel.cols;
     });
     checkGameWon();
 })
@@ -62,7 +67,7 @@ onKey('arrowleft', () => {
     // Move cells of the selected row left, wrapping
     const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
     spritesInRow.forEach(sprite => {
-        sprite.col = (sprite.col - 1 + 5) % 5;
+        sprite.col = (sprite.col - 1 + currentLevel.cols) % currentLevel.cols;
     });
     checkGameWon();
 })
@@ -89,8 +94,10 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         type: 'cell',
         // custom properties
         update: function() {
-            this.x = this.col * 64;
-            this.y = this.row * 64;
+            this.x = this.col * colWidth;
+            this.y = this.row * rowHeight;
+            this.width = colWidth;
+            this.height = rowHeight;
         },
         render: function() {
             const ctx = getContext();
@@ -99,7 +106,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
             if (!this.width || !this.height) return;
 
             ctx.drawImage(this.image, 
-                this.imageCol * 64, this.imageRow * 64, this.width, this.height,
+                this.imageCol * (320 / currentLevel.cols), this.imageRow * (320 / currentLevel.rows), this.width, this.height,
                 0, 0, this.width, this.height
             );
         },
@@ -109,24 +116,23 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
 const initGame = async () => {
     init('gameCanvas');
     // Shuffled initial board state
-    const shuffledBoardState = [
-        {row: 0, offset: Math.floor(Math.random() * 5)},
-        {row: 1, offset: Math.floor(Math.random() * 5)},
-        {row: 2, offset: Math.floor(Math.random() * 5)},
-        {row: 3, offset: Math.floor(Math.random() * 5)},
-        {row: 4, offset: Math.floor(Math.random() * 5)},
-    ]
+    const shuffledBoardState = Array.from({ length: currentLevel.rows }, (_, i) => ({
+        row: i,
+        offset: Math.floor(Math.random() * currentLevel.cols),
+    }));
     shuffleArray(shuffledBoardState);
 
     // Image Sprites
-    const hamsterImage = await loadImage('./hamster.png');
-    for (let i = 0; i < 5; i++) {
-        for (let j = 0; j < 5; j++) {
+    const hamsterImage = await loadImage(`./${currentLevel.image}`);
+    for (let i = 0; i < currentLevel.rows; i++) {
+        for (let j = 0; j < currentLevel.cols; j++) {
             let cellSprite = CellSprite(hamsterImage as HTMLImageElement);
+            cellSprite.width = 320 / currentLevel.cols;
+            cellSprite.height = 320 / currentLevel.rows;
             cellSprite.imageRow = i;
             cellSprite.imageCol = j;
             cellSprite.row = shuffledBoardState[i].row;
-            cellSprite.col = (shuffledBoardState[i].offset + j) % 5;
+            cellSprite.col = (shuffledBoardState[i].offset + j) % currentLevel.cols;
             cellSprite.correctRow = i;
             cellSprite.correctCol = j
             sprites.push(cellSprite);
@@ -136,12 +142,12 @@ const initGame = async () => {
     // UI Sprites
     const selectionSprite = Sprite({
         width: 320,
-        height: 64,
+        height: 320 / currentLevel.rows,
         color: 'red',
         x: 0,
         y: 0,
         update: function() {
-            this.y = selectedRow * 64;
+            this.y = selectedRow * (320 / currentLevel.rows);
         },
         render: function() {
             const ctx = getContext();
