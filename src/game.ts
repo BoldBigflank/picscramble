@@ -1,5 +1,4 @@
 import { init, Sprite, GameLoop, getContext, initKeys, onKey } from 'kontra';
-import { levels } from './levels';
 import { loadImage, shuffleArray } from './utils';
 
 const sprites: Sprite[] = [];
@@ -68,27 +67,6 @@ onKey('arrowleft', () => {
     checkGameWon();
 })
 
-type Cell = {
-    width: number;
-    height: number;
-    image: HTMLImageElement;
-    imageX: number;
-    imageY: number;
-    x: number;
-    y: number;
-}
-
-type Row = {
-    cells: Cell[]
-}
-
-type GameState = {
-    image: HTMLImageElement;
-    board: {
-        rows: Row[]
-    }
-}
-
 const checkGameWon = () => {
     const cells = sprites.filter(sprite => sprite.type === 'cell');
     const complete = cells.every(cell => cell.row === cell.correctRow && cell.col === cell.correctCol);
@@ -116,6 +94,10 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         },
         render: function() {
             const ctx = getContext();
+            if (!ctx) return;
+            if (!this.image) return;
+            if (!this.width || !this.height) return;
+
             ctx.drawImage(this.image, 
                 this.imageCol * 64, this.imageRow * 64, this.width, this.height,
                 0, 0, this.width, this.height
@@ -125,7 +107,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
 }
 
 const initGame = async () => {
-    let { canvas } = init('gameCanvas');
+    init('gameCanvas');
     // Shuffled initial board state
     const shuffledBoardState = [
         {row: 0, offset: Math.floor(Math.random() * 5)},
@@ -163,7 +145,9 @@ const initGame = async () => {
         },
         render: function() {
             const ctx = getContext();
-            ctx.strokeStyle = this.color;
+            if (!ctx) return;
+            if (!this.width || !this.height) return;
+            ctx.strokeStyle = this.color || 'red';
             ctx.strokeRect(0, 0, this.width, this.height);
         }
     })
