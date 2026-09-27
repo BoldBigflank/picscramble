@@ -1,4 +1,4 @@
-import { init, Sprite, GameLoop, getContext, initKeys, onKey } from 'kontra';
+import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer } from 'kontra';
 import { loadImage, shuffleArray } from './utils';
 import { levels } from './levels';
 
@@ -9,9 +9,34 @@ const colWidth = 320 / currentLevel.cols;
 const sprites: Sprite[] = [];
 
 let selectedRow = 0
+let selectedCol = 0
 let gameWon = false;
 
-initKeys()
+const shiftSelectedRow = (direction: number) => {
+    if (selectedRow === -1) return;
+    if (selectedRow + direction < 0) return;
+    if (selectedRow + direction > currentLevel.rows - 1) return;
+    const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
+    const spritesInAdjacentRow = sprites.filter(sprite => sprite.row === selectedRow + direction);
+    spritesInRow.forEach(sprite => {
+        sprite.row = selectedRow + direction;
+    });
+    spritesInAdjacentRow.forEach(sprite => {
+        sprite.row = selectedRow;
+    });
+    selectedRow += direction;
+    checkGameWon();
+}
+
+const shiftColsInSelectedRow = (direction: number) => {
+    if (selectedRow === -1) return;
+    const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
+    spritesInRow.forEach(sprite => {
+        sprite.col = (sprite.col + direction + currentLevel.cols) % currentLevel.cols;
+    });
+    checkGameWon();
+}
+
 onKey('z', () => {
     selectedRow += 1;
     if (selectedRow > currentLevel.rows - 1) {
@@ -27,31 +52,11 @@ onKey('a', () => {
 
 onKey('arrowup', () => {
     // Swap rows with the row above the selected row
-    if (selectedRow <= 0) return;
-    const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
-    const spritesInAboveRow = sprites.filter(sprite => sprite.row === selectedRow - 1);
-    spritesInRow.forEach(sprite => {
-        sprite.row = selectedRow - 1;
-    });
-    spritesInAboveRow.forEach(sprite => {
-        sprite.row = selectedRow;
-    });
-    selectedRow -= 1;
-    checkGameWon();
+    shiftSelectedRow(-1);
 })
 
 onKey('arrowdown', () => {
-    if (selectedRow >= currentLevel.rows - 1) return;
-    const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
-    const spritesInBelowRow = sprites.filter(sprite => sprite.row === selectedRow + 1);
-    spritesInRow.forEach(sprite => {
-        sprite.row = selectedRow + 1;
-    });
-    spritesInBelowRow.forEach(sprite => {
-        sprite.row = selectedRow;
-    });
-    selectedRow += 1;
-    checkGameWon();
+    shiftSelectedRow(1);
 })
 
 onKey('arrowright', () => {
@@ -73,6 +78,7 @@ onKey('arrowleft', () => {
 })
 
 const checkGameWon = () => {
+    if (gameWon) return;
     const cells = sprites.filter(sprite => sprite.type === 'cell');
     const complete = cells.every(cell => cell.row === cell.correctRow && cell.col === cell.correctCol);
     if (!gameWon && complete) {
@@ -92,6 +98,13 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         row: 0,
         col: 0,
         type: 'cell',
+        onDown: function(){
+            selectedRow = this.row;
+            selectedCol = this.col;
+        },
+        onUp: function(){
+            selectedRow = -1;
+        },
         // custom properties
         update: function() {
             this.x = this.col * colWidth;
@@ -115,6 +128,9 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
 
 const initGame = async () => {
     init('gameCanvas');
+    initKeys()
+    initPointer({radius: 1})
+
     // Shuffled initial board state
     const shuffledBoardState = Array.from({ length: currentLevel.rows }, (_, i) => ({
         row: i,
@@ -135,6 +151,7 @@ const initGame = async () => {
             cellSprite.col = (shuffledBoardState[i].offset + j) % currentLevel.cols;
             cellSprite.correctRow = i;
             cellSprite.correctCol = j
+            track(cellSprite)
             sprites.push(cellSprite);
         }
     }
@@ -147,9 +164,11 @@ const initGame = async () => {
         x: 0,
         y: 0,
         update: function() {
+            if (selectedRow === -1) return;
             this.y = selectedRow * (320 / currentLevel.rows);
         },
         render: function() {
+            if (selectedRow === -1) return;
             const ctx = getContext();
             if (!ctx) return;
             if (!this.width || !this.height) return;
@@ -163,6 +182,21 @@ const initGame = async () => {
     let loop = GameLoop({  // create the main game loop
     update: function() { // update the game state
         sprites.forEach(sprite => sprite.update());
+        // Pointer stuff
+        if (pointerPressed('left')) {
+            const pointer = getPointer()
+            const pointerRow = Math.floor(pointer.y / rowHeight);
+            const pointerCol = Math.floor(pointer.x / colWidth);
+            if (pointerRow !== selectedRow) {
+                shiftSelectedRow(pointerRow - selectedRow);
+            }
+            if (pointerCol !== selectedCol) {
+                shiftColsInSelectedRow(pointerCol - selectedCol);
+                selectedCol = pointerCol;
+            }
+        }
+
+
     },
     render: function() { // render the game state
         sprites.forEach(sprite => sprite.render());
