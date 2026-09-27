@@ -89,6 +89,7 @@ const checkGameWon = () => {
     const complete = cells.every(cell => cell.row === cell.correctRow && cell.col === cell.correctCol);
     if (!gameWon && complete) {
         gameWon = true;
+        selectedRow = -1;
     }
 }
 
@@ -98,6 +99,8 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         height: 64,
         color: 'blue',
         image: image,
+        offsetX: 0,
+        offsetY: 0,
         imageRow: 0,
         imageCol: 0,
         row: 0,
@@ -117,6 +120,8 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
             this.y = this.row * rowHeight;
             this.width = colWidth;
             this.height = rowHeight;
+            this.offsetX = (pointerPressed('left') && selectedRow === this.row) ? -3 : 0;
+            this.offsetY = (pointerPressed('left') && selectedRow === this.row) ? -3 : 0;
         },
         render: function() {
             const ctx = getContext();
@@ -127,7 +132,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
             ctx.filter = gameWon ? 'none' : 'grayscale(100%)';
             ctx.drawImage(this.image, 
                 this.imageCol * (320 / currentLevel.cols), this.imageRow * (320 / currentLevel.rows), this.width, this.height,
-                0, 0, this.width, this.height
+                this.offsetX, this.offsetY, this.width, this.height
             );
             ctx.restore()
         },
