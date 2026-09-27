@@ -38,12 +38,14 @@ const shiftColsInSelectedRow = (direction: number) => {
 }
 
 onKey('z', () => {
+    if (gameWon) return;
     selectedRow += 1;
     if (selectedRow > currentLevel.rows - 1) {
         selectedRow = currentLevel.rows - 1;
     }
 })
 onKey('a', () => {
+    if (gameWon) return;
     selectedRow -= 1;
     if (selectedRow < 0) {
         selectedRow = 0;
@@ -52,15 +54,18 @@ onKey('a', () => {
 
 onKey('arrowup', () => {
     // Swap rows with the row above the selected row
+    if (gameWon) return;
     shiftSelectedRow(-1);
 })
 
 onKey('arrowdown', () => {
+    if (gameWon) return;
     shiftSelectedRow(1);
 })
 
 onKey('arrowright', () => {
     // Move cells of the selected row right, wrapping
+    if (gameWon) return;
     const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
     spritesInRow.forEach(sprite => {
         sprite.col = (sprite.col + 1) % currentLevel.cols;
@@ -70,6 +75,7 @@ onKey('arrowright', () => {
 
 onKey('arrowleft', () => {
     // Move cells of the selected row left, wrapping
+    if (gameWon) return;
     const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
     spritesInRow.forEach(sprite => {
         sprite.col = (sprite.col - 1 + currentLevel.cols) % currentLevel.cols;
@@ -83,7 +89,6 @@ const checkGameWon = () => {
     const complete = cells.every(cell => cell.row === cell.correctRow && cell.col === cell.correctCol);
     if (!gameWon && complete) {
         gameWon = true;
-        alert('Congratulations! You won!');
     }
 }
 
@@ -99,6 +104,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         col: 0,
         type: 'cell',
         onDown: function(){
+            if (gameWon) return;
             selectedRow = this.row;
             selectedCol = this.col;
         },
@@ -117,11 +123,13 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
             if (!ctx) return;
             if (!this.image) return;
             if (!this.width || !this.height) return;
-
+            ctx.save()
+            ctx.filter = gameWon ? 'none' : 'grayscale(100%)';
             ctx.drawImage(this.image, 
                 this.imageCol * (320 / currentLevel.cols), this.imageRow * (320 / currentLevel.rows), this.width, this.height,
                 0, 0, this.width, this.height
             );
+            ctx.restore()
         },
     })
 }
@@ -168,7 +176,7 @@ const initGame = async () => {
             this.y = selectedRow * (320 / currentLevel.rows);
         },
         render: function() {
-            if (selectedRow === -1) return;
+            if (selectedRow === -1 || gameWon) return;
             const ctx = getContext();
             if (!ctx) return;
             if (!this.width || !this.height) return;
@@ -184,6 +192,7 @@ const initGame = async () => {
         sprites.forEach(sprite => sprite.update());
         // Pointer stuff
         if (pointerPressed('left')) {
+            if (gameWon) return;
             const pointer = getPointer()
             const pointerRow = Math.floor(pointer.y / rowHeight);
             const pointerCol = Math.floor(pointer.x / colWidth);
