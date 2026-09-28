@@ -1,22 +1,77 @@
 import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer } from 'kontra';
-import { loadImage, shuffleArray } from './utils';
-import { getLevel } from './levels';
-import Rand from 'rand-seed';
+import { loadImage } from './utils';
+import type { BoardState, Puzzle } from './levels';
 
-const currentLevel = getLevel('2026-09-26');
-const rowHeight = 320 / currentLevel.rows;
-const colWidth = 320 / currentLevel.cols;
+export type GameCallbacks = {
+    onStateChange: (state: BoardState) => void;
+    onWin: (result: { moves: number; state: BoardState }) => void;
+}
+
+let puzzle: Puzzle;
+let rowHeight = 0;
+let colWidth = 0;
+let callbacks: GameCallbacks;
 
 const sprites: Sprite[] = [];
 
 let selectedRow = 0
 let selectedCol = 0
 let gameWon = false;
+let started = false;
+let paused = false;
+let moves = 0;
+let selectionColor = 'red';
+
+const canPlay = () => started && !paused && !gameWon;
+
+const wrap = (value: number, size: number) => ((value % size) + size) % size;
+
+export const parseBoardState = (inputString: string | null | undefined, p: Puzzle): BoardState | undefined => {
+    if (!inputString) return undefined;
+    try {
+        const state = JSON.parse(inputString);
+        if (!Array.isArray(state) || state.length !== p.rows) return undefined;
+        const rows = new Set(state.map(entry => entry?.row));
+        const valid = rows.size === p.rows && state.every(entry =>
+            Number.isInteger(entry.row) && entry.row >= 0 && entry.row < p.rows &&
+            Number.isInteger(entry.offset) && entry.offset >= 0 && entry.offset < p.cols
+        );
+        return valid ? state : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+const cellSprites = () => sprites.filter(sprite => sprite.type === 'cell');
+
+const getBoardState = (): BoardState => {
+    const state: BoardState = [];
+    cellSprites()
+        .filter(cell => cell.imageCol === 0)
+        .forEach(cell => { state[cell.imageRow] = { row: cell.row, offset: cell.col }; });
+    return state;
+}
+
+const applyBoardState = (state: BoardState) => {
+    cellSprites().forEach(cell => {
+        cell.row = state[cell.imageRow].row;
+        cell.col = (state[cell.imageRow].offset + cell.imageCol) % puzzle.cols;
+    });
+}
+
+const isSolved = () => cellSprites().every(cell => cell.row === cell.correctRow && cell.col === cell.correctCol);
+
+const recordMove = () => {
+    moves += 1;
+    const state = getBoardState();
+    callbacks.onStateChange(state);
+    checkGameWon(state);
+}
 
 const shiftSelectedRow = (direction: number) => {
     if (selectedRow === -1) return;
     if (selectedRow + direction < 0) return;
-    if (selectedRow + direction > currentLevel.rows - 1) return;
+    if (selectedRow + direction > puzzle.rows - 1) return;
     const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
     const spritesInAdjacentRow = sprites.filter(sprite => sprite.row === selectedRow + direction);
     spritesInRow.forEach(sprite => {
@@ -26,63 +81,56 @@ const shiftSelectedRow = (direction: number) => {
         sprite.row = selectedRow;
     });
     selectedRow += direction;
-    checkGameWon();
+    recordMove();
 }
 
 const shiftColsInSelectedRow = (direction: number) => {
     if (selectedRow === -1) return;
     const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
     spritesInRow.forEach(sprite => {
-        sprite.col = (sprite.col + direction + currentLevel.cols) % currentLevel.cols;
+        sprite.col = wrap(sprite.col + direction, puzzle.cols);
     });
-    checkGameWon();
+    recordMove();
 }
 
 onKey('z', () => {
-    if (gameWon) return;
-    selectedRow += 1;
-    if (selectedRow > currentLevel.rows - 1) {
-        selectedRow = currentLevel.rows - 1;
-    }
+    if (!canPlay()) return;
+    selectedRow = Math.min(selectedRow + 1, puzzle.rows - 1);
 })
 onKey('a', () => {
-    if (gameWon) return;
-    selectedRow -= 1;
-    if (selectedRow < 0) {
-        selectedRow = 0;
-    }
+    if (!canPlay()) return;
+    selectedRow = Math.max(selectedRow - 1, 0);
 })
 
 onKey('arrowup', () => {
     // Swap rows with the row above the selected row
-    if (gameWon) return;
+    if (!canPlay()) return;
     shiftSelectedRow(-1);
 })
 
 onKey('arrowdown', () => {
-    if (gameWon) return;
+    if (!canPlay()) return;
     shiftSelectedRow(1);
 })
 
 onKey('arrowright', () => {
     // Move cells of the selected row right, wrapping
-    if (gameWon) return;
+    if (!canPlay()) return;
     shiftColsInSelectedRow(1);
 })
 
 onKey('arrowleft', () => {
     // Move cells of the selected row left, wrapping
-    if (gameWon) return;
+    if (!canPlay()) return;
     shiftColsInSelectedRow(-1);
 })
 
-const checkGameWon = () => {
+const checkGameWon = (state: BoardState) => {
     if (gameWon) return;
-    const cells = sprites.filter(sprite => sprite.type === 'cell');
-    const complete = cells.every(cell => cell.row === cell.correctRow && cell.col === cell.correctCol);
-    if (complete) {
+    if (isSolved()) {
         gameWon = true;
         selectedRow = -1;
+        callbacks.onWin({ moves, state });
     }
 }
 
@@ -97,7 +145,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         col: 0,
         type: 'cell',
         onDown: function(){
-            if (gameWon) return;
+            if (!canPlay()) return;
             selectedRow = this.row;
             selectedCol = this.col;
         },
@@ -121,7 +169,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
             ctx.save()
             ctx.filter = gameWon ? 'none' : 'grayscale(100%)';
             ctx.drawImage(this.image, 
-                this.imageCol * (320 / currentLevel.cols), this.imageRow * (320 / currentLevel.rows), this.width, this.height,
+                this.imageCol * colWidth, this.imageRow * rowHeight, this.width, this.height,
                 this.offsetX, this.offsetY, this.width, this.height
             );
             ctx.restore()
@@ -129,54 +177,52 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
     })
 }
 
-const initGame = async () => {
+const initGame = async (level: Puzzle, savedState: BoardState | undefined, gameCallbacks: GameCallbacks) => {
+    puzzle = level;
+    callbacks = gameCallbacks;
+    rowHeight = 320 / puzzle.rows;
+    colWidth = 320 / puzzle.cols;
+
     init('gameCanvas');
     initKeys()
     initPointer({radius: 1})
 
-    // Shuffled initial board state
-    const rand = new Rand(currentLevel.seed);
-    const shuffledBoardState = Array.from({ length: currentLevel.rows }, (_, i) => ({
-        row: i,
-        offset: Math.floor(rand.next() * currentLevel.cols),
-    }));
-    shuffleArray(shuffledBoardState, rand.next.bind(rand));
-
     // Image Sprites
-    const hamsterImage = await loadImage(`./${currentLevel.image}`);
-    for (let i = 0; i < currentLevel.rows; i++) {
-        for (let j = 0; j < currentLevel.cols; j++) {
-            let cellSprite = CellSprite(hamsterImage as HTMLImageElement);
-            cellSprite.width = 320 / currentLevel.cols;
-            cellSprite.height = 320 / currentLevel.rows;
+    const image = await loadImage(`./${puzzle.image}`);
+    for (let i = 0; i < puzzle.rows; i++) {
+        for (let j = 0; j < puzzle.cols; j++) {
+            let cellSprite = CellSprite(image as HTMLImageElement);
+            cellSprite.width = colWidth;
+            cellSprite.height = rowHeight;
             cellSprite.imageRow = i;
             cellSprite.imageCol = j;
-            cellSprite.row = shuffledBoardState[i].row;
-            cellSprite.col = (shuffledBoardState[i].offset + j) % currentLevel.cols;
             cellSprite.correctRow = i;
             cellSprite.correctCol = j
             track(cellSprite)
             sprites.push(cellSprite);
         }
     }
+    applyBoardState(savedState ?? puzzle.startState);
+    // A restored save may already be solved; show it as won without reporting a new win.
+    gameWon = isSolved();
+    if (gameWon) selectedRow = -1;
 
     // UI Sprites
     const selectionSprite = Sprite({
         width: 320,
-        height: 320 / currentLevel.rows,
-        color: 'red',
+        height: rowHeight,
         x: 0,
         y: 0,
         update: function() {
             if (selectedRow === -1) return;
-            this.y = selectedRow * (320 / currentLevel.rows);
+            this.y = selectedRow * rowHeight;
         },
         render: function() {
             if (selectedRow === -1 || gameWon) return;
             const ctx = getContext();
             if (!ctx) return;
             if (!this.width || !this.height) return;
-            ctx.strokeStyle = this.color || 'red';
+            ctx.strokeStyle = selectionColor;
             ctx.strokeRect(0, 0, this.width, this.height);
         }
     })
@@ -188,14 +234,14 @@ const initGame = async () => {
         sprites.forEach(sprite => sprite.update());
         // Pointer stuff
         if (pointerPressed('left')) {
-            if (gameWon) return;
+            if (!canPlay()) return;
             const pointer = getPointer()
             const pointerRow = Math.floor(pointer.y / rowHeight);
             const pointerCol = Math.floor(pointer.x / colWidth);
-            if (pointerRow !== selectedRow) {
+            if (selectedRow !== -1 && pointerRow !== selectedRow) {
                 shiftSelectedRow(pointerRow - selectedRow);
             }
-            if (pointerCol !== selectedCol) {
+            if (selectedRow !== -1 && pointerCol !== selectedCol) {
                 shiftColsInSelectedRow(pointerCol - selectedCol);
                 selectedCol = pointerCol;
             }
@@ -212,4 +258,31 @@ const initGame = async () => {
     return loop;
 }
 
-export { initGame };
+const startGame = () => {
+    started = true;
+    paused = false;
+}
+
+const pauseGame = () => {
+    paused = true;
+}
+
+const resumeGame = () => {
+    paused = false;
+}
+
+const retryGame = () => {
+    applyBoardState(puzzle.startState);
+    moves = 0;
+    gameWon = false;
+    paused = false;
+    selectedRow = 0;
+    selectedCol = 0;
+    callbacks.onStateChange(getBoardState());
+}
+
+const setSelectionColor = (color: string) => {
+    selectionColor = color;
+}
+
+export { initGame, startGame, pauseGame, resumeGame, retryGame, setSelectionColor };

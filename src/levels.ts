@@ -1,31 +1,38 @@
+import Rand from 'rand-seed';
+import { shuffleArray } from './utils';
 
-type Level = {
-    date: string;
+// One entry per image row: which board row it sits in, and how far its cells are shifted.
+export type BoardState = { row: number; offset: number }[];
+
+export type Puzzle = {
     image: string;
     rows: number;
     cols: number;
     seed: string;
+    startState: BoardState;
 }
 
-const levels: Level[] = []
+const scrambleFromSeed = (seed: string, rows: number, cols: number): BoardState => {
+    const rand = new Rand(seed);
+    const state = Array.from({ length: rows }, (_, i) => ({
+        row: i,
+        offset: Math.floor(rand.next() * cols),
+    }));
+    shuffleArray(state, rand.next.bind(rand));
+    return state;
+}
 
-levels.push({
-    date: '2026-09-26',
-    image: 'hamster.png',
-    rows: 8,
-    cols: 8,
-    seed: '1234567890',
-})
-
-levels.push({
-    date: '2026-09-27',
-    image: 'hamster.png',
-    rows: 8,
-    cols: 8,
-    seed: '9876543210',
-})
-
-export const getLevel = (date: string) => {
-    if (!date) return levels[0]
-    return levels.find(level => level.date === date)
+export const parsePuzzle = (puzzleString: string): Puzzle => {
+    const data = JSON.parse(puzzleString)
+    if (typeof data.image !== 'string') throw new Error('Puzzle is missing an image')
+    if (!Number.isInteger(data.rows) || data.rows < 1) throw new Error('Puzzle has invalid rows')
+    if (!Number.isInteger(data.cols) || data.cols < 1) throw new Error('Puzzle has invalid cols')
+    if (typeof data.seed !== 'string' || !data.seed) throw new Error('Puzzle is missing a seed')
+    return {
+        image: data.image,
+        rows: data.rows,
+        cols: data.cols,
+        seed: data.seed,
+        startState: scrambleFromSeed(data.seed, data.rows, data.cols),
+    }
 }

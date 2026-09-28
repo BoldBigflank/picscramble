@@ -1,7 +1,9 @@
 import { viteExternalsPlugin } from "vite-plugin-externals";
+import { puzzmoSimulator } from "@puzzmo/sdk/vite";
 
 export default {
   base: "",
+  plugins: [puzzmoSimulator({ fixturesGlob: "/fixtures/puzzles/**/*.json" })],
   server: {
     allowedHosts: [
       "localhost",

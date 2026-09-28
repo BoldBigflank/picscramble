@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/@puzzmo/cli/schemas/puzzmo-file-schema.json",
+  "game": {
+    "displayName": "PicScramble",
+    "slug": "picscramble",
+    "teamID": "TODO"
+  },
+  "output": {
+    "dir": "dist"
+  }
+}
