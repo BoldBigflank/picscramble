@@ -1,9 +1,27 @@
-const level1 = {
-    date: '2026-09-26',
-    image: 'hamster.png',
-    rows: 10,
-    cols: 10,
+type Level = {
+    date: string;
+    image: string;
+    rows: number;
+    cols: number;
 }
 
+const levels: Level[] = []
 
-export const levels = [level1]
+levels.push({
+    date: '2026-09-26',
+    image: 'hamster.png',
+    rows: 8,
+    cols: 8,
+})
+
+levels.push({
+    date: '2026-09-27',
+    image: 'hamster.png',
+    rows: 8,
+    cols: 8,
+})
+
+export const getLevel = (date: string) => {
+    if (!date) return levels[0]
+    return levels.find(level => level.date === date)
+}

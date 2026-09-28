@@ -1,8 +1,8 @@
 import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer } from 'kontra';
 import { loadImage, shuffleArray } from './utils';
-import { levels } from './levels';
+import { getLevel } from './levels';
 
-const currentLevel = levels[0];
+const currentLevel = getLevel('2026-09-26');
 const rowHeight = 320 / currentLevel.rows;
 const colWidth = 320 / currentLevel.cols;
 
