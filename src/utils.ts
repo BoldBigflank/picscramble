@@ -7,10 +7,10 @@ export const loadImage = (src: string) => {
     });
 }
 
-export const shuffleArray = (array: any[]) => {
+export const shuffleArray = (array: any[], randFunc: Function = Math.random.bind(Math)) => {
     // Fisher-Yates shuffle
     for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(randFunc() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;

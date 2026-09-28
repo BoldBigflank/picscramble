@@ -245,6 +245,11 @@ postcss@^8.5.28:
     picocolors "^1.1.1"
     source-map-js "^1.2.1"
 
+rand-seed@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/rand-seed/-/rand-seed-3.0.0.tgz#b828cb016869b5302405d4786f3ac4175aa57fb0"
+  integrity sha512-Zy8wnL6whyIAGOX2i9Mn1Orq3t9TNizGUk8euxamr60Z3PmspwFeT+vCZPcYMAR5nOztnAKPtVi3jt8EzmCB6g==
+
 rolldown@~1.2.9:
   version "1.2.11"
   resolved "https://registry.yarnpkg.com/rolldown/-/rolldown-1.2.11.tgz#89c4e07d9098b88fe0b023de59d63a6216e9285c"

@@ -14,6 +14,7 @@
     "vite-plugin-externals": "^0.6.2"
   },
   "dependencies": {
-    "kontra": "^10.0.2"
+    "kontra": "^10.0.2",
+    "rand-seed": "^3.0.0"
   }
 }

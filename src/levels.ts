@@ -1,8 +1,10 @@
+
 type Level = {
     date: string;
     image: string;
     rows: number;
     cols: number;
+    seed: string;
 }
 
 const levels: Level[] = []
@@ -12,6 +14,7 @@ levels.push({
     image: 'hamster.png',
     rows: 8,
     cols: 8,
+    seed: '1234567890',
 })
 
 levels.push({
@@ -19,6 +22,7 @@ levels.push({
     image: 'hamster.png',
     rows: 8,
     cols: 8,
+    seed: '9876543210',
 })
 
 export const getLevel = (date: string) => {

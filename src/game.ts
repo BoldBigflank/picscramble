@@ -1,6 +1,7 @@
 import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer } from 'kontra';
 import { loadImage, shuffleArray } from './utils';
 import { getLevel } from './levels';
+import Rand from 'rand-seed';
 
 const currentLevel = getLevel('2026-09-26');
 const rowHeight = 320 / currentLevel.rows;
@@ -66,28 +67,20 @@ onKey('arrowdown', () => {
 onKey('arrowright', () => {
     // Move cells of the selected row right, wrapping
     if (gameWon) return;
-    const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
-    spritesInRow.forEach(sprite => {
-        sprite.col = (sprite.col + 1) % currentLevel.cols;
-    });
-    checkGameWon();
+    shiftColsInSelectedRow(1);
 })
 
 onKey('arrowleft', () => {
     // Move cells of the selected row left, wrapping
     if (gameWon) return;
-    const spritesInRow = sprites.filter(sprite => sprite.row === selectedRow);
-    spritesInRow.forEach(sprite => {
-        sprite.col = (sprite.col - 1 + currentLevel.cols) % currentLevel.cols;
-    });
-    checkGameWon();
+    shiftColsInSelectedRow(-1);
 })
 
 const checkGameWon = () => {
     if (gameWon) return;
     const cells = sprites.filter(sprite => sprite.type === 'cell');
     const complete = cells.every(cell => cell.row === cell.correctRow && cell.col === cell.correctCol);
-    if (!gameWon && complete) {
+    if (complete) {
         gameWon = true;
         selectedRow = -1;
     }
@@ -95,9 +88,6 @@ const checkGameWon = () => {
 
 const CellSprite = (image: HTMLImageElement): Sprite => {
     return Sprite({
-        width: 64,
-        height: 64,
-        color: 'blue',
         image: image,
         offsetX: 0,
         offsetY: 0,
@@ -145,11 +135,12 @@ const initGame = async () => {
     initPointer({radius: 1})
 
     // Shuffled initial board state
+    const rand = new Rand(currentLevel.seed);
     const shuffledBoardState = Array.from({ length: currentLevel.rows }, (_, i) => ({
         row: i,
-        offset: Math.floor(Math.random() * currentLevel.cols),
+        offset: Math.floor(rand.next() * currentLevel.cols),
     }));
-    shuffleArray(shuffledBoardState);
+    shuffleArray(shuffledBoardState, rand.next.bind(rand));
 
     // Image Sprites
     const hamsterImage = await loadImage(`./${currentLevel.image}`);
