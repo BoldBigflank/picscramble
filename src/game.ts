@@ -16,11 +16,12 @@ const sprites: Sprite[] = [];
 
 let selectedRow = 0
 let selectedCol = 0
+let pointerStart = undefined
 let gameWon = false;
 let started = false;
 let paused = false;
 let moves = 0;
-let selectionColor = 'red';
+let selectionColor = '#990033aa';
 
 const canPlay = () => started && !paused && !gameWon;
 
@@ -81,6 +82,12 @@ const shiftSelectedRow = (direction: number) => {
         sprite.row = selectedRow;
     });
     selectedRow += direction;
+
+    // If the pointer is set, shift the y of i
+    if (pointerStart) {
+        pointerStart.y += direction * rowHeight;
+    }
+    
     recordMove();
 }
 
@@ -151,12 +158,15 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         speed: 32,
         type: 'cell',
         onDown: function(){
+            console.log('onDown');
             if (!canPlay()) return;
             selectedRow = this.row;
             selectedCol = this.col;
+            pointerStart = {...getPointer()};
         },
         onUp: function(){
             selectedRow = -1;
+            pointerStart = undefined
         },
         // custom properties
         update: function() {
@@ -164,16 +174,18 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
             if (this.y === undefined) this.y = 0;
             this.desiredX = this.col * colWidth;
             this.desiredY = this.row * rowHeight;
-
-            if (pointerPressed('left') && selectedRow === this.row) {
-                this.desiredX -= 3;
-                this.desiredY -= 3;
+            if (pointerStart && selectedRow === this.row) {
+                const pointer = getPointer();
+                const differenceX = pointer.x - pointerStart.x;
+                const differenceY = pointer.y - pointerStart.y;
+                console.log(pointer.x, pointer.y, differenceX, differenceY);
+                this.desiredX += differenceX;
+                this.desiredY += differenceY;
             }
+
             this.width = colWidth;
             this.height = rowHeight;
 
-            // this.x = this.desiredX;
-            // this.y = this.desiredY;
             // If x and desiredX are different, set dx to the direction of the difference
             if (Math.abs(this.desiredX - this.x) > this.speed) {
                 const difference = this.desiredX - this.x;
