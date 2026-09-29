@@ -16,7 +16,7 @@ const sprites: Sprite[] = [];
 
 let selectedRow = 0
 let selectedCol = 0
-let pointerStart = undefined
+let pointerStart: { x: number; y: number, radius: number, canvas: HTMLCanvasElement } | undefined = undefined
 let gameWon = false;
 let started = false;
 let paused = false;
