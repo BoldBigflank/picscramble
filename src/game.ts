@@ -1,4 +1,4 @@
-import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer, lerp } from 'kontra';
+import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer } from 'kontra';
 import { loadImage, toGrayscale } from './utils';
 import type { BoardState, Puzzle } from './levels';
 
@@ -136,6 +136,8 @@ const checkGameWon = (state: BoardState) => {
 
 const CellSprite = (image: HTMLImageElement): Sprite => {
     return Sprite({
+        x: 0,
+        y: 0,
         image: image,
         grayImage: toGrayscale(image),
         offsetX: 0,
@@ -146,6 +148,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         imageCol: 0,
         row: 0,
         col: 0,
+        speed: 32,
         type: 'cell',
         onDown: function(){
             if (!canPlay()) return;
@@ -157,6 +160,8 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         },
         // custom properties
         update: function() {
+            if (this.x === undefined) this.x = 0;
+            if (this.y === undefined) this.y = 0;
             this.desiredX = this.col * colWidth;
             this.desiredY = this.row * rowHeight;
 
@@ -169,8 +174,24 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
 
             // this.x = this.desiredX;
             // this.y = this.desiredY;
-            this.x = lerp(this.x, this.desiredX, 0.5);
-            this.y = lerp(this.y, this.desiredY, 0.5);
+            // If x and desiredX are different, set dx to the direction of the difference
+            if (Math.abs(this.desiredX - this.x) > this.speed) {
+                const difference = this.desiredX - this.x;
+                const sign = difference > 0 ? 1 : -1;
+                this.dx = this.speed * sign;
+            } else {
+                this.x = this.desiredX;
+                this.dx = 0;
+            }
+            if (Math.abs(this.desiredY - this.y) > this.speed) {
+                const difference = this.desiredY - this.y;
+                const sign = difference > 0 ? 1 : -1;
+                this.dy = this.speed * sign;
+            } else {
+                this.y = this.desiredY;
+                this.dy = 0;
+            }
+            this.advance()
         },
         render: function() {
             const ctx = getContext();
