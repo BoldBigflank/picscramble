@@ -180,8 +180,8 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
 const initGame = async (level: Puzzle, savedState: BoardState | undefined, gameCallbacks: GameCallbacks) => {
     puzzle = level;
     callbacks = gameCallbacks;
-    rowHeight = 320 / puzzle.rows;
-    colWidth = 320 / puzzle.cols;
+    rowHeight = 640 / puzzle.rows;
+    colWidth = 640 / puzzle.cols;
 
     init('gameCanvas');
     initKeys()
@@ -209,7 +209,7 @@ const initGame = async (level: Puzzle, savedState: BoardState | undefined, gameC
 
     // UI Sprites
     const selectionSprite = Sprite({
-        width: 320,
+        width: 640,
         height: rowHeight,
         x: 0,
         y: 0,
