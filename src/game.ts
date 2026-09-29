@@ -1,5 +1,5 @@
 import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer } from 'kontra';
-import { loadImage } from './utils';
+import { loadImage, toGrayscale } from './utils';
 import type { BoardState, Puzzle } from './levels';
 
 export type GameCallbacks = {
@@ -137,6 +137,7 @@ const checkGameWon = (state: BoardState) => {
 const CellSprite = (image: HTMLImageElement): Sprite => {
     return Sprite({
         image: image,
+        grayImage: toGrayscale(image),
         offsetX: 0,
         offsetY: 0,
         imageRow: 0,
@@ -167,8 +168,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
             if (!this.image) return;
             if (!this.width || !this.height) return;
             ctx.save()
-            ctx.filter = gameWon ? 'none' : 'grayscale(100%)';
-            ctx.drawImage(this.image, 
+            ctx.drawImage(gameWon ? this.image : this.grayImage, 
                 this.imageCol * colWidth, this.imageRow * rowHeight, this.width, this.height,
                 this.offsetX, this.offsetY, this.width, this.height
             );
@@ -188,10 +188,10 @@ const initGame = async (level: Puzzle, savedState: BoardState | undefined, gameC
     initPointer({radius: 1})
 
     // Image Sprites
-    const image = await loadImage(`./${puzzle.image}`);
+    const image = await loadImage(`./${puzzle.image}`) as HTMLImageElement;
     for (let i = 0; i < puzzle.rows; i++) {
         for (let j = 0; j < puzzle.cols; j++) {
-            let cellSprite = CellSprite(image as HTMLImageElement);
+            let cellSprite = CellSprite(image);
             cellSprite.width = colWidth;
             cellSprite.height = rowHeight;
             cellSprite.imageRow = i;
