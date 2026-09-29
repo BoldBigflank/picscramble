@@ -1,4 +1,4 @@
-import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer } from 'kontra';
+import { init, Sprite, GameLoop, getContext, initKeys, initPointer, track, onKey, pointerPressed, getPointer, lerp } from 'kontra';
 import { loadImage, toGrayscale } from './utils';
 import type { BoardState, Puzzle } from './levels';
 
@@ -140,6 +140,8 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         grayImage: toGrayscale(image),
         offsetX: 0,
         offsetY: 0,
+        desiredX: 0,
+        desiredY: 0,
         imageRow: 0,
         imageCol: 0,
         row: 0,
@@ -155,12 +157,20 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         },
         // custom properties
         update: function() {
-            this.x = this.col * colWidth;
-            this.y = this.row * rowHeight;
+            this.desiredX = this.col * colWidth;
+            this.desiredY = this.row * rowHeight;
+
+            if (pointerPressed('left') && selectedRow === this.row) {
+                this.desiredX -= 3;
+                this.desiredY -= 3;
+            }
             this.width = colWidth;
             this.height = rowHeight;
-            this.offsetX = (pointerPressed('left') && selectedRow === this.row) ? -3 : 0;
-            this.offsetY = (pointerPressed('left') && selectedRow === this.row) ? -3 : 0;
+
+            // this.x = this.desiredX;
+            // this.y = this.desiredY;
+            this.x = lerp(this.x, this.desiredX, 0.5);
+            this.y = lerp(this.y, this.desiredY, 0.5);
         },
         render: function() {
             const ctx = getContext();
@@ -170,7 +180,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
             ctx.save()
             ctx.drawImage(gameWon ? this.image : this.grayImage, 
                 this.imageCol * colWidth, this.imageRow * rowHeight, this.width, this.height,
-                this.offsetX, this.offsetY, this.width, this.height
+                0,0, this.width, this.height
             );
             ctx.restore()
         },
