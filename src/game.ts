@@ -97,6 +97,9 @@ const shiftColsInSelectedRow = (direction: number) => {
     spritesInRow.forEach(sprite => {
         sprite.col = wrap(sprite.col + direction, puzzle.cols);
     });
+    if (pointerStart) {
+        pointerStart.x += direction * colWidth;
+    }
     recordMove();
 }
 
@@ -158,7 +161,6 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         speed: 32,
         type: 'cell',
         onDown: function(){
-            console.log('onDown');
             if (!canPlay()) return;
             selectedRow = this.row;
             selectedCol = this.col;
@@ -178,7 +180,6 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
                 const pointer = getPointer();
                 const differenceX = pointer.x - pointerStart.x;
                 const differenceY = pointer.y - pointerStart.y;
-                console.log(pointer.x, pointer.y, differenceX, differenceY);
                 this.desiredX += differenceX;
                 this.desiredY += differenceY;
             }
