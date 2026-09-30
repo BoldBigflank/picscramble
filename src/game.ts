@@ -12,7 +12,7 @@ let rowHeight = 0;
 let colWidth = 0;
 let callbacks: GameCallbacks;
 
-const sprites: Sprite[] = [];
+let sprites: Sprite[] = [];
 
 let selectedRow = 0
 let selectedCol = 0
@@ -69,6 +69,16 @@ const recordMove = () => {
     checkGameWon(state);
 }
 
+const selectRow = (row: number) => {
+    selectedRow = row;
+    // Move all sprites in the selected row to the end of the sprites array
+    const newSprites = [
+        ...sprites.filter(sprite => sprite.row !== row),
+        ...sprites.filter(sprite => sprite.row === row),
+    ]
+    sprites = newSprites;
+}
+
 const shiftSelectedRow = (direction: number) => {
     if (selectedRow === -1) return;
     if (selectedRow + direction < 0) return;
@@ -105,11 +115,11 @@ const shiftColsInSelectedRow = (direction: number) => {
 
 onKey('z', () => {
     if (!canPlay()) return;
-    selectedRow = Math.min(selectedRow + 1, puzzle.rows - 1);
+    selectRow(Math.min(selectedRow + 1, puzzle.rows - 1));
 })
 onKey('a', () => {
     if (!canPlay()) return;
-    selectedRow = Math.max(selectedRow - 1, 0);
+    selectRow(Math.max(selectedRow - 1, 0));
 })
 
 onKey('arrowup', () => {
@@ -162,7 +172,7 @@ const CellSprite = (image: HTMLImageElement): Sprite => {
         type: 'cell',
         onDown: function(){
             if (!canPlay()) return;
-            selectedRow = this.row;
+            selectRow(this.row);
             selectedCol = this.col;
             pointerStart = {...getPointer()};
         },
@@ -259,7 +269,9 @@ const initGame = async (level: Puzzle, savedState: BoardState | undefined, gameC
         y: 0,
         update: function() {
             if (selectedRow === -1) return;
-            this.y = selectedRow * rowHeight;
+            const pointer = getPointer();
+            const pointerDiffY = (pointerPressed('left')) ? (pointer.y - (pointerStart?.y ?? 0)) : 0;
+            this.y = selectedRow * rowHeight + pointerDiffY;
         },
         render: function() {
             if (selectedRow === -1 || gameWon) return;
@@ -320,7 +332,7 @@ const retryGame = () => {
     moves = 0;
     gameWon = false;
     paused = false;
-    selectedRow = 0;
+    selectRow(0);
     selectedCol = 0;
     callbacks.onStateChange(getBoardState());
 }
