@@ -34,7 +34,18 @@ export const showPuzzleList = (root: HTMLElement) => {
     document.getElementById('gameCanvas')?.remove()
 
     const list = el('div', 'puzzle-list')
-    list.appendChild(el('h1', undefined, 'Pic Scramble'))
+    list.appendChild(el('h1', undefined, 'PicScramble'))
+
+    // Subheader/objective
+    const subheader = el('p', 'subheader', 'Solve the picture by rearranging the tiles.')
+    list.appendChild(subheader)
+
+    // Instructions
+    const instructions = el('div', 'instructions')
+    instructions.appendChild(el('h2', undefined, 'Instructions'))
+    instructions.appendChild(el('p', undefined, 'Mouse/Touch: Click/touch a tile to select. Move the row up or down, or move side to side to shift the tiles in the row.'))
+    instructions.appendChild(el('p', undefined, 'Keyboard: Use a/z to select a row, then arrow keys to move the row or rearrange the tiles in the row.'))
+    list.appendChild(instructions)
 
     const categories = [...new Set(puzzleEntries.map(entry => entry.category))]
     for (const category of categories) {
